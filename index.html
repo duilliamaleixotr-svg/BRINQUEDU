@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BrinqueDu — Orçamentos & Contratos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --r:#C8102E;--r-dark:#a00d24;--r-bg:#fdf0f2;--r-muted:#f7d5db;
+  --preto:#0e0e0e;--c100:#f8f8f7;--c200:#eeede9;--c300:#dddcd8;--c400:#b4b2ab;--c600:#7a7972;--c800:#3a3935;
+  --branco:#fff;--ok:#166534;--ok-bg:#dcfce7;
+  --radius:10px;--radius-lg:16px;
+  --sombra:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);
+}
+body{font-family:'DM Sans',sans-serif;background:var(--c100);color:var(--preto);min-height:100vh}
+
+.topo{background:var(--preto);padding:0 28px;display:flex;align-items:stretch;border-bottom:3px solid var(--r);position:sticky;top:0;z-index:100}
+.topo-logo{display:flex;align-items:center;gap:12px;padding:14px 0;flex:1}
+.topo-icon{width:36px;height:36px;background:var(--r);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.topo-marca{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:#fff;letter-spacing:-.5px}
+.topo-marca span{color:var(--r)}
+.topo-sub{font-size:10px;font-weight:300;color:var(--c400);letter-spacing:2px;text-transform:uppercase;margin-top:1px}
+
+.nav-abas{display:flex;gap:0;margin:0 28px 0 auto;align-items:center}
+.aba-btn{padding:8px 18px;border:none;background:transparent;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:.5px;color:var(--c400);cursor:pointer;border-bottom:3px solid transparent;transition:color .15s,border-color .15s;text-transform:uppercase;height:100%;display:flex;align-items:center;gap:6px}
+.aba-btn:hover{color:#fff}
+.aba-btn.ativa{color:#fff;border-bottom-color:var(--r)}
+.aba-badge{background:var(--r);color:#fff;font-size:9px;padding:1px 6px;border-radius:20px;font-family:'Syne',sans-serif}
+
+.pagina{max-width:1220px;margin:0 auto;padding:28px 20px}
+.aba-conteudo{display:none}
+.aba-conteudo.ativa{display:block}
+
+/* GRID ORÇAMENTO */
+.grid-orc{display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:start}
+.col-principal{display:flex;flex-direction:column;gap:20px}
+
+/* CARDS */
+.card{background:var(--branco);border-radius:var(--radius-lg);border:1px solid var(--c200);padding:24px 28px;box-shadow:var(--sombra)}
+.card-titulo{font-family:'Syne',sans-serif;font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--c600);margin-bottom:18px;display:flex;align-items:center;gap:9px}
+.card-titulo::before{content:'';display:block;width:3px;height:15px;background:var(--r);border-radius:2px;flex-shrink:0}
+.num-badge{background:var(--r);color:#fff;font-size:9px;font-weight:700;font-family:'Syne',sans-serif;padding:2px 6px;border-radius:100px;letter-spacing:0}
+
+/* FORM */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-grupo{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.form-grupo label{font-size:11px;font-weight:500;color:var(--c600);letter-spacing:.5px;text-transform:uppercase}
+.form-grupo input,.form-grupo textarea{padding:9px 13px;border:1.5px solid var(--c300);border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:14px;color:var(--preto);background:var(--c100);transition:border-color .15s,background .15s;outline:none;width:100%}
+.form-grupo input:focus,.form-grupo textarea:focus{border-color:var(--r);background:#fff;box-shadow:0 0 0 3px rgba(200,16,46,.08)}
+.form-grupo input::placeholder{color:var(--c400)}
+
+/* PRODUTOS */
+.lista-produtos{display:flex;flex-direction:column;gap:8px}
+.item-produto{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:var(--radius);border:1.5px solid var(--c200);cursor:pointer;transition:border-color .15s,background .15s;user-select:none;background:var(--c100)}
+.item-produto:hover{border-color:var(--c400);background:var(--branco)}
+.item-produto.selecionado{border-color:var(--r);background:var(--r-bg)}
+.item-produto input[type="checkbox"]{display:none}
+.item-check{width:18px;height:18px;border-radius:5px;border:2px solid var(--c300);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;margin-right:10px}
+.item-produto.selecionado .item-check{background:var(--r);border-color:var(--r)}
+.item-check-icon{color:#fff;font-size:11px;display:none;font-weight:700}
+.item-produto.selecionado .item-check-icon{display:block}
+.item-info-wrap{display:flex;align-items:center;flex:1;min-width:0}
+.item-emoji{font-size:16px;margin-right:9px;flex-shrink:0}
+.item-nome{font-size:13px;font-weight:400;color:var(--c800);line-height:1.3}
+.item-produto.selecionado .item-nome{color:var(--preto);font-weight:500}
+.item-preco{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:var(--c600);white-space:nowrap;margin-left:10px;flex-shrink:0}
+.item-produto.selecionado .item-preco{color:var(--r)}
+
+/* SIDEBAR */
+.sidebar{position:sticky;top:78px}
+.sidebar .card{padding:20px}
+.resumo-secao-titulo{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--c400);margin-bottom:10px}
+.resumo-linha{display:flex;justify-content:space-between;align-items:center;padding:7px 0;font-size:13px;color:var(--c600);border-bottom:1px dashed var(--c200)}
+.resumo-linha:last-of-type{border-bottom:none}
+.resumo-linha strong{color:var(--preto);font-weight:500}
+.desconto-linha{display:none;justify-content:space-between;align-items:center;padding:7px 0;font-size:13px;color:var(--ok);border-bottom:1px dashed var(--c200)}
+.resumo-total-bloco{background:var(--preto);border-radius:var(--radius);padding:14px 18px;margin-top:14px;display:flex;justify-content:space-between;align-items:center}
+.resumo-total-label{font-size:11px;font-weight:300;color:var(--c400);letter-spacing:1px;text-transform:uppercase}
+.resumo-total-valor{font-family:'Syne',sans-serif;font-weight:800;font-size:24px;color:#fff}
+.alerta-desconto{background:var(--ok-bg);color:var(--ok);padding:9px 12px;border-radius:var(--radius);font-size:12px;font-weight:500;margin-top:12px;display:none;border:1px solid #bbf7d0}
+.divider{height:1px;background:var(--c200);margin:16px 0}
+.btn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:11px 18px;border:none;border-radius:var(--radius);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:.5px;cursor:pointer;transition:transform .1s,opacity .15s;text-decoration:none;margin-bottom:8px}
+.btn:hover{opacity:.9}
+.btn:active{transform:scale(.98)}
+.btn-r{background:var(--r);color:#fff}
+.btn-preto{background:var(--preto);color:#fff}
+.btn:last-child{margin-bottom:0}
+.sinal-info{font-size:11px;color:var(--c600);text-align:center;margin-top:12px;line-height:1.5}
+.sinal-info strong{color:var(--preto)}
+
+/* DESCONTO MANUAL */
+.desconto-manual-bloco{background:var(--ok-bg);border:1px solid #bbf7d0;border-radius:var(--radius);padding:14px;margin-top:4px}
+.desconto-manual-titulo{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--ok);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.tipo-toggle{display:flex;border:1.5px solid #bbf7d0;border-radius:8px;overflow:hidden;margin-bottom:10px}
+.tipo-toggle button{flex:1;padding:6px 0;border:none;background:transparent;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--ok);cursor:pointer;transition:background .15s,color .15s}
+.tipo-toggle button.ativo{background:var(--ok);color:#fff}
+.desc-input-wrap{display:flex;align-items:center;gap:8px}
+.desc-input-wrap input{flex:1;padding:8px 12px;border:1.5px solid #bbf7d0;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;color:var(--ok);background:#fff;outline:none;transition:border-color .15s}
+.desc-input-wrap input:focus{border-color:var(--ok)}
+.desc-input-wrap .unidade{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--ok);min-width:24px;text-align:center}
+.desc-resultado{margin-top:8px;font-size:12px;color:var(--ok);font-weight:500;text-align:center;min-height:16px}
+
+/* CONTRATOS */
+.contratos-vazio{text-align:center;padding:60px 20px;color:var(--c400)}
+.contratos-vazio .big{font-size:48px;margin-bottom:16px}
+.contratos-vazio p{font-size:14px}
+.contratos-grid{display:flex;flex-direction:column;gap:12px}
+.contrato-card{background:var(--branco);border:1px solid var(--c200);border-radius:var(--radius-lg);padding:20px 24px;box-shadow:var(--sombra);display:grid;grid-template-columns:1fr auto;gap:16px;align-items:start}
+.contrato-nome{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:var(--preto);margin-bottom:4px}
+.contrato-meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.tag{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;background:var(--c200);color:var(--c800)}
+.tag-r{background:var(--r-muted);color:var(--r-dark)}
+.tag-ok{background:var(--ok-bg);color:var(--ok)}
+.contrato-itens{font-size:12px;color:var(--c600);line-height:1.8}
+.contrato-acoes{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.btn-sm{padding:6px 14px;border:none;border-radius:8px;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;cursor:pointer;transition:opacity .15s;white-space:nowrap}
+.btn-sm:hover{opacity:.85}
+.btn-sm-r{background:var(--r);color:#fff}
+.btn-sm-cinza{background:var(--c200);color:var(--c800)}
+.btn-sm-danger{background:#fee2e2;color:#991b1b}
+.contrato-total{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:var(--r);margin-top:6px}
+
+/* AGENDA */
+.agenda-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.agenda-nav{display:flex;align-items:center;gap:12px}
+.agenda-mes-btn{width:32px;height:32px;border:1.5px solid var(--c300);border-radius:8px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:border-color .15s}
+.agenda-mes-btn:hover{border-color:var(--r)}
+.agenda-titulo-mes{font-family:'Syne',sans-serif;font-weight:700;font-size:18px;color:var(--preto);min-width:180px;text-align:center}
+.agenda-legenda{display:flex;gap:12px;align-items:center}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--c600)}
+.leg-dot{width:10px;height:10px;border-radius:50%}
+
+.calendario{background:var(--branco);border-radius:var(--radius-lg);border:1px solid var(--c200);overflow:hidden;box-shadow:var(--sombra)}
+.cal-dias-semana{display:grid;grid-template-columns:repeat(7,1fr);background:var(--preto)}
+.cal-dia-sem{padding:10px;text-align:center;font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;color:var(--c400);text-transform:uppercase}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--c200)}
+.cal-dia{background:var(--branco);min-height:90px;padding:8px;position:relative;transition:background .15s;cursor:default}
+.cal-dia.outro-mes{background:var(--c100)}
+.cal-dia.hoje{background:#fffbf0}
+.cal-dia.tem-evento{cursor:pointer}
+.cal-dia.tem-evento:hover{background:var(--r-bg)}
+.cal-num{font-size:12px;font-weight:500;color:var(--c800);margin-bottom:4px}
+.cal-dia.outro-mes .cal-num{color:var(--c300)}
+.cal-evento-pill{background:var(--r);color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:'Syne',sans-serif;cursor:pointer}
+.cal-evento-pill:hover{background:var(--r-dark)}
+.cal-mais{font-size:9px;color:var(--c600);font-weight:500;padding-left:2px}
+
+/* LISTA EVENTOS */
+.eventos-lista{display:flex;flex-direction:column;gap:10px;margin-top:20px}
+.evento-card{background:var(--branco);border:1px solid var(--c200);border-radius:var(--radius-lg);padding:16px 20px;display:flex;gap:16px;align-items:stretch;box-shadow:var(--sombra);transition:border-color .15s}
+.evento-card:hover{border-color:var(--r)}
+.evento-data-bloco{background:var(--preto);border-radius:var(--radius);padding:10px 14px;text-align:center;flex-shrink:0;min-width:56px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ev-dia{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;color:#fff;line-height:1}
+.ev-mes{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--c400);margin-top:2px}
+.evento-info{flex:1}
+.ev-nome{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:var(--preto);margin-bottom:4px}
+.ev-detalhe{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.ev-itens{font-size:12px;color:var(--c600);line-height:1.7}
+.ev-total{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:var(--r);margin-top:6px}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.aberto{display:flex}
+.modal-box{background:#fff;border-radius:var(--radius-lg);max-width:700px;width:100%;max-height:90vh;overflow-y:auto;padding:36px 40px;position:relative;font-family:'Georgia',serif;color:#000;font-size:13px;line-height:1.7;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal-fechar{position:absolute;top:16px;right:20px;border:none;background:var(--c200);border-radius:8px;width:32px;height:32px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--c800)}
+.ct-topo{text-align:center;margin-bottom:24px;border-bottom:2px solid #000;padding-bottom:14px}
+.ct-topo h1{font-size:17px;font-weight:bold;margin-bottom:3px}
+.ct-topo p{font-size:11px;color:#333}
+.ct-secao{margin-bottom:16px}
+.ct-secao h4{font-size:10px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #ccc;padding-bottom:3px;margin-bottom:8px}
+.ct-caixa{border:1px solid #bbb;padding:10px 14px;border-radius:4px}
+.ct-caixa p{margin-bottom:3px}
+.ct-clausulas{font-size:12px;text-align:justify}
+.ct-clausulas p{margin-bottom:7px}
+.ct-assinaturas{display:flex;justify-content:space-between;margin-top:40px}
+.ct-assin-bloco{width:42%;border-top:1px solid #000;padding-top:7px;text-align:center;font-size:12px}
+.ct-valores{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ct-valor-item{border:1px solid #bbb;padding:9px 13px;border-radius:4px}
+.ct-valor-item .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#555}
+.ct-valor-item .val{font-size:17px;font-weight:bold}
+.modal-acoes{display:flex;gap:10px;margin-top:20px;padding-top:20px;border-top:1px solid var(--c200);font-family:'DM Sans',sans-serif}
+.modal-acoes .btn{width:auto;flex:1}
+
+/* PRINT */
+@media print{
+  body *{visibility:hidden}
+  #printArea,#printArea *{visibility:visible}
+  #printArea{position:absolute;left:0;top:0;width:100%;padding:30px 40px;font-family:'Georgia',serif;color:#000;font-size:13px;line-height:1.6}
+  #printArea .ct-topo{text-align:center;margin-bottom:24px;border-bottom:2px solid #000;padding-bottom:14px}
+  #printArea .ct-topo h1{font-size:17px;font-weight:bold;margin-bottom:3px}
+  #printArea .ct-secao{margin-bottom:16px}
+  #printArea .ct-secao h4{font-size:10px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #ccc;padding-bottom:3px;margin-bottom:8px}
+  #printArea .ct-caixa{border:1px solid #bbb;padding:10px 14px;border-radius:4px}
+  #printArea .ct-caixa p{margin-bottom:3px}
+  #printArea .ct-clausulas{font-size:12px;text-align:justify}
+  #printArea .ct-clausulas p{margin-bottom:7px}
+  #printArea .ct-assinaturas{display:flex;justify-content:space-between;margin-top:40px}
+  #printArea .ct-assin-bloco{width:42%;border-top:1px solid #000;padding-top:7px;text-align:center;font-size:12px}
+  #printArea .ct-valores{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  #printArea .ct-valor-item{border:1px solid #bbb;padding:9px 13px;border-radius:4px}
+  #printArea .ct-valor-item .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#555}
+  #printArea .ct-valor-item .val{font-size:17px;font-weight:bold}
+}
+
+/* RESPONSIVO */
+@media(max-width:900px){
+  .grid-orc{grid-template-columns:1fr}
+  .sidebar{position:static}
+  .topo{padding:0 16px}
+  .card{padding:18px}
+  .grid-2{grid-template-columns:1fr}
+  .nav-abas{gap:0}
+  .aba-btn{padding:8px 12px;font-size:10px}
+  .contrato-card{grid-template-columns:1fr}
+  .agenda-titulo-mes{min-width:140px;font-size:15px}
+  .cal-dia{min-height:60px;padding:5px}
+}
+</style>
+</head>
+<body>
+
+<header class="topo">
+  <div class="topo-logo">
+    <div class="topo-icon">🎡</div>
+    <div>
+      <div class="topo-marca">Brinque<span>Du</span></div>
+      <div class="topo-sub">Locação de Brinquedos para Festas</div>
+    </div>
+  </div>
+  <nav class="nav-abas">
+    <button class="aba-btn ativa" onclick="trocarAba('orcamento',this)">📋 Orçamento</button>
+    <button class="aba-btn" onclick="trocarAba('contratos',this)">📁 Contratos <span class="aba-badge" id="badge-contratos">0</span></button>
+    <button class="aba-btn" onclick="trocarAba('agenda',this)">📅 Agenda <span class="aba-badge" id="badge-agenda">0</span></button>
+  </nav>
+</header>
+
+<div class="pagina">
+
+<!-- ABA ORÇAMENTO -->
+<div class="aba-conteudo ativa" id="aba-orcamento">
+  <div class="grid-orc">
+    <div class="col-principal">
+
+      <div class="card">
+        <div class="card-titulo"><span class="num-badge">1</span> Dados do Cliente & Evento</div>
+        <div class="grid-2">
+          <div class="form-grupo"><label>Nome do Cliente</label><input type="text" id="clienteNome" placeholder="Ex: Jussara Moreira"></div>
+          <div class="form-grupo"><label>CPF</label><input type="text" id="clienteCPF" placeholder="000.000.000-00"></div>
+        </div>
+        <div class="grid-2">
+          <div class="form-grupo"><label>Telefone</label><input type="text" id="clienteTelefone" placeholder="(19) 99999-9999"></div>
+          <div class="form-grupo"><label>E-mail</label><input type="email" id="clienteEmail" placeholder="cliente@email.com"></div>
+        </div>
+        <div class="form-grupo"><label>Endereço do Cliente</label><input type="text" id="clienteEndereco" placeholder="Rua, Número, Bairro, Cidade/SP"></div>
+        <div class="form-grupo"><label>Endereço da Festa (se diferente)</label><input type="text" id="festaEndereco" placeholder="Local de montagem dos brinquedos"></div>
+        <div class="grid-2">
+          <div class="form-grupo"><label>Data do Evento</label><input type="date" id="eventoData"></div>
+          <div class="form-grupo"><label>Frete Adicional (R$)</label><input type="number" id="freteValor" value="0" min="0" oninput="calcular()"></div>
+        </div>
+        <div class="grid-2">
+          <div class="form-grupo"><label>Horário de Início</label><input type="time" id="horarioInicio"></div>
+          <div class="form-grupo"><label>Horário de Término</label><input type="time" id="horarioTermino"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-titulo"><span class="num-badge">2</span> Combos Promocionais <small style="font-family:'DM Sans';font-size:11px;color:var(--c400);font-weight:400;text-transform:none;letter-spacing:0">(múltipla seleção)</small></div>
+        <div class="lista-produtos" id="listaCombos">
+          <label class="item-produto" onclick="toggle(this)">
+            <input type="checkbox" class="chk-item" data-nome="KIT BABY (Cama 2.44m + Piscina 1.20m + Escorregador + 3 Gangorras)" data-preco="300">
+            <div class="item-check"><span class="item-check-icon">✓</span></div>
+            <div class="item-info-wrap"><span class="item-emoji">👶</span><span class="item-nome">KIT BABY — Cama 2.44m + Piscina 1.20m + Escorregador + 3 Gangorras</span></div>
+            <span class="item-preco">R$ 300</span>
+          </label>
+          <label class="item-produto" onclick="toggle(this)">
+            <input type="checkbox" class="chk-item" data-nome="DIVERSÃO NAS ALTURAS (Castelo Pula-Pula + Cama 3.05m)" data-preco="370">
+            <div class="item-check"><span class="item-check-icon">✓</span></div>
+            <div class="item-info-wrap"><span class="item-emoji">🏰</span><span class="item-nome">DIVERSÃO NAS ALTURAS — Castelo Pula-Pula + Cama 3.05m</span></div>
+            <span class="item-preco">R$ 370</span>
+          </label>
+          <label class="item-produto" onclick="toggle(this)">
+            <input type="checkbox" class="chk-item" data-nome="LANCHE & ALEGRIA (Algodão Doce + Pipoca + Cama 2.44m)" data-preco="700">
+            <div class="item-check"><span class="item-check-icon">✓</span></div>
+            <div class="item-info-wrap"><span class="item-emoji">🍭</span><span class="item-nome">LANCHE & ALEGRIA — Algodão Doce + Pipoca + Cama 2.44m</span></div>
+            <span class="item-preco">R$ 700</span>
+          </label>
+          <label class="item-produto" onclick="toggle(this)">
+            <input type="checkbox" class="chk-item" data-nome="MEGA SPLASH (Mini Tobogã + Cama 3.05m + Escorregador + Gangorra)" data-preco="520">
+            <div class="item-check"><span class="item-check-icon">✓</span></div>
+            <div class="item-info-wrap"><span class="item-emoji">🐳</span><span class="item-nome">MEGA SPLASH — Mini Tobogã + Cama 3.05m + Escorregador + Gangorra</span></div>
+            <span class="item-preco">R$ 520</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-titulo"><span class="num-badge">3</span> Atrações Avulsas <small style="font-family:'DM Sans';font-size:11px;color:var(--c400);font-weight:400;text-transform:none;letter-spacing:0">(desconto progressivo)</small></div>
+        <div class="lista-produtos" id="listaAvulsos">
+          <label class="item-produto" onclick="toggle(this)">
+            <input type="checkbox" class="chk-item" data-nome="Mini Tobogã + Piscina Inflável" data-preco="350">
+            <div class="item-check"><span class="item-check-icon">✓</span></div>
+            <div class="item-info-wrap"><span class="item-emoji">🌊</span><span class="item-nome">Mini Tobogã + Piscina Inflável</span></div>
+            <span class="item-preco">R$ 350</span>
+          </label>
+          <label class="item-produto" onclick="toggle(this)">
+            <input type="checkbox" class="chk-item" data-nome="Castelo Pula-Pula com Saída Tobogã" data-preco="250">
+            <div class="item-check"><span class="item-check-icon">✓</span></div>
+            <div class="item-info-wrap"><span class="item-emoji">🏰</span><span class="item-nome">Castelo Pula-Pula com Saída Tobogã</span></div>
+            <span class="item-preco">R$ 250</span>
+          </label>
+          <label class="item-produto" onclick="toggle(this)">
+            <input type="checkbox" class="chk-item" data-nome="Cama Elástica 3.05m" data-preco="150">
+            <div class="item-check"><span class="item-check-icon">✓</span></div>
+            <div class="item-info-wrap"><span class="item-emoji">🎡</span><span class="item-nome">Cama Elástica 3.05m</span></div>
+            <span class="item-preco">R$ 150</span>
+          </label>
+          <label class="item-produto" onclick="toggle(this)">
+            <input type="checkbox" class="chk-item" data-nome="Cama Elástica 2.44m" data-preco="130">
+            <div class="item-check"><span class="item-check-icon">✓</span></div>
+            <div class="item-info-wrap"><span class="item-emoji">🎡</span><span class="item-nome">Cama Elástica 2.44m</span></div>
+            <span class="item-preco">R$ 130</span>
+          </label>
+          <label class="item-produto" onclick="toggle(this)">
+            <input type="checkbox" class="chk-item" data-nome="Piscina de Bolinha 1.50m" data-preco="100">
+            <div class="item-check"><span class="item-check-icon">✓</span></div>
+            <div class="item-info-wrap"><span class="item-emoji">🔵</span><span class="item-nome">Piscina de Bolinha 1.50m</span></div>
+            <span class="item-preco">R$ 100</span>
+          </label>
+          <label class="item-produto" onclick="toggle(this)">
+            <input type="checkbox" class="chk-item" data-nome="Máquina de Algodão Doce" data-preco="300">
+            <div class="item-check"><span class="item-check-icon">✓</span></div>
+            <div class="item-info-wrap"><span class="item-emoji">🍬</span><span class="item-nome">Máquina de Algodão Doce</span></div>
+            <span class="item-preco">R$ 300</span>
+          </label>
+          <label class="item-produto" onclick="toggle(this)">
+            <input type="checkbox" class="chk-item" data-nome="Pipoqueira Elétrica" data-preco="300">
+            <div class="item-check"><span class="item-check-icon">✓</span></div>
+            <div class="item-info-wrap"><span class="item-emoji">🍿</span><span class="item-nome">Pipoqueira Elétrica</span></div>
+            <span class="item-preco">R$ 300</span>
+          </label>
+          <label class="item-produto" onclick="toggle(this)">
+            <input type="checkbox" class="chk-item" data-nome="Escorregador de Plástico (3 degraus)" data-preco="50">
+            <div class="item-check"><span class="item-check-icon">✓</span></div>
+            <div class="item-info-wrap"><span class="item-emoji">🧸</span><span class="item-nome">Escorregador de Plástico (3 degraus)</span></div>
+            <span class="item-preco">R$ 50</span>
+          </label>
+          <label class="item-produto" onclick="toggle(this)">
+            <input type="checkbox" class="chk-item" data-nome="Gangorrinha / Cavalo" data-preco="50">
+            <div class="item-check"><span class="item-check-icon">✓</span></div>
+            <div class="item-info-wrap"><span class="item-emoji">🎠</span><span class="item-nome">Gangorrinha / Cavalo</span></div>
+            <span class="item-preco">R$ 50</span>
+          </label>
+          <label class="item-produto" onclick="toggle(this)">
+            <input type="checkbox" class="chk-item" data-nome="Monitor de Brinquedos" data-preco="100">
+            <div class="item-check"><span class="item-check-icon">✓</span></div>
+            <div class="item-info-wrap"><span class="item-emoji">👤</span><span class="item-nome">Monitor de Brinquedos</span></div>
+            <span class="item-preco">R$ 100</span>
+          </label>
+        </div>
+      </div>
+
+    </div><!-- /col-principal -->
+
+    <aside class="sidebar">
+      <div class="card">
+        <div class="card-titulo">Resumo do Orçamento</div>
+        <div class="resumo-secao-titulo">Composição</div>
+        <div class="resumo-linha"><span>Subtotal dos itens</span><strong id="rBrinquedos">R$ 0,00</strong></div>
+        <div class="desconto-linha" id="linhaDesc"><span>Desconto progressivo</span><strong id="rDesconto" style="color:var(--ok)">— R$ 0,00</strong></div>
+        <div class="desconto-linha" id="linhaDescManual" style="display:none"><span>Desconto adicional</span><strong id="rDescontoManual" style="color:var(--ok)">— R$ 0,00</strong></div>
+        <div class="resumo-linha"><span>Frete / Deslocamento</span><strong id="rFrete">R$ 0,00</strong></div>
+        <div class="alerta-desconto" id="avisoDesc"></div>
+
+        <div class="divider"></div>
+        <!-- DESCONTO MANUAL -->
+        <div class="desconto-manual-bloco">
+          <div class="desconto-manual-titulo">🏷️ Desconto Adicional</div>
+          <div class="tipo-toggle">
+            <button id="btnTipoPct" class="ativo" onclick="setTipoDesconto('pct')">% Porcentagem</button>
+            <button id="btnTipoReais" onclick="setTipoDesconto('reais')">R$ Valor fixo</button>
+          </div>
+          <div class="desc-input-wrap">
+            <input type="number" id="descontoValor" min="0" placeholder="0" oninput="calcular()">
+            <span class="unidade" id="descontoUnidade">%</span>
+          </div>
+          <div class="desc-resultado" id="descResultado"></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="resumo-total-bloco">
+          <div><div class="resumo-total-label">Total geral</div></div>
+          <div class="resumo-total-valor" id="rTotal">R$ 0,00</div>
+        </div>
+        <div class="divider"></div>
+        <div class="resumo-secao-titulo">Pagamento</div>
+        <div class="resumo-linha"><span>Sinal (reserva)</span><strong>R$ 50,00</strong></div>
+        <div class="resumo-linha" style="border-bottom:none"><span>Saldo na montagem</span><strong id="rSaldo" style="color:var(--r)">R$ —</strong></div>
+        <div class="divider"></div>
+        <button class="btn btn-r" onclick="enviarWA()">📲 Enviar via WhatsApp</button>
+        <button class="btn btn-preto" onclick="salvarContrato()">💾 Salvar Contrato</button>
+        <button class="btn" style="background:var(--c200);color:var(--c800)" onclick="imprimirContrato()">📄 Imprimir PDF</button>
+        <p class="sinal-info">O valor de <strong>R$ 50,00</strong> confirma a reserva da data. O saldo é pago no ato da montagem.</p>
+      </div>
+    </aside>
+  </div>
+</div><!-- /aba-orcamento -->
+
+<!-- ABA CONTRATOS -->
+<div class="aba-conteudo" id="aba-contratos">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+    <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:22px;color:var(--preto)">Contratos Salvos</div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <input type="text" id="buscaContrato" oninput="filtrarContratos()" placeholder="Buscar por nome..." style="padding:8px 13px;border:1.5px solid var(--c300);border-radius:var(--radius);font-size:13px;width:220px;outline:none;background:var(--c100)">
+    </div>
+  </div>
+  <div id="listaContratos"></div>
+</div>
+
+<!-- ABA AGENDA -->
+<div class="aba-conteudo" id="aba-agenda">
+  <div class="agenda-header">
+    <div class="agenda-nav">
+      <button class="agenda-mes-btn" onclick="mudarMes(-1)">&#8249;</button>
+      <div class="agenda-titulo-mes" id="agendaTituloMes"></div>
+      <button class="agenda-mes-btn" onclick="mudarMes(1)">&#8250;</button>
+    </div>
+    <div class="agenda-legenda">
+      <div class="leg-item"><div class="leg-dot" style="background:var(--r)"></div><span>Locação</span></div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--preto)"></div><span>Hoje</span></div>
+    </div>
+  </div>
+  <div class="calendario">
+    <div class="cal-dias-semana">
+      <div class="cal-dia-sem">Dom</div>
+      <div class="cal-dia-sem">Seg</div>
+      <div class="cal-dia-sem">Ter</div>
+      <div class="cal-dia-sem">Qua</div>
+      <div class="cal-dia-sem">Qui</div>
+      <div class="cal-dia-sem">Sex</div>
+      <div class="cal-dia-sem">Sáb</div>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+  <div id="eventosLista" class="eventos-lista"></div>
+</div>
+
+</div><!-- /pagina -->
+
+<!-- MODAL CONTRATO -->
+<div class="modal-overlay" id="modalContrato">
+  <div class="modal-box" id="modalContratoBox">
+    <button class="modal-fechar" onclick="fecharModal()">&#10005;</button>
+    <div id="modalContratoConteudo"></div>
+    <div class="modal-acoes">
+      <button class="btn btn-r" onclick="imprimirModalContrato()">🖨️ Imprimir PDF</button>
+      <button class="btn btn-preto" onclick="whatsAppModal()">📲 WhatsApp</button>
+      <button class="btn" style="background:var(--c200);color:var(--c800)" onclick="fecharModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ÁREA DE IMPRESSÃO -->
+<div id="printArea"></div>
+
+<script>
+let contratos = JSON.parse(localStorage.getItem('brinquedu_contratos') || '[]');
+let mesAtual = new Date().getMonth();
+let anoAtual = new Date().getFullYear();
+let totalGlobal = 0;
+let modalAtual = null;
+
+function salvarLS() {
+  localStorage.setItem('brinquedu_contratos', JSON.stringify(contratos));
+  atualizarBadges();
+}
+
+function trocarAba(id, btn) {
+  document.querySelectorAll('.aba-conteudo').forEach(a => a.classList.remove('ativa'));
+  document.querySelectorAll('.aba-btn').forEach(b => b.classList.remove('ativa'));
+  document.getElementById('aba-' + id).classList.add('ativa');
+  btn.classList.add('ativa');
+  if (id === 'contratos') renderContratos();
+  if (id === 'agenda') renderAgenda();
+}
+
+function atualizarBadges() {
+  document.getElementById('badge-contratos').textContent = contratos.length;
+  document.getElementById('badge-agenda').textContent = contratos.length;
+}
+
+function toggle(label) {
+  const chk = label.querySelector('input[type="checkbox"]');
+  chk.checked = !chk.checked;
+  label.classList.toggle('selecionado', chk.checked);
+  calcular();
+}
+
+function fmt(v) {
+  return 'R$ ' + v.toFixed(2).replace('.', ',');
+}
+
+let tipoDesconto = 'pct';
+
+function setTipoDesconto(tipo) {
+  tipoDesconto = tipo;
+  document.getElementById('btnTipoPct').classList.toggle('ativo', tipo === 'pct');
+  document.getElementById('btnTipoReais').classList.toggle('ativo', tipo === 'reais');
+  document.getElementById('descontoUnidade').innerText = tipo === 'pct' ? '%' : 'R$';
+  document.getElementById('descontoValor').value = '';
+  document.getElementById('descResultado').innerText = '';
+  calcular();
+}
+
+function calcular() {
+  let sub = 0, qtdAvulso = 0, desconto = 0;
+  document.querySelectorAll('.chk-item:checked').forEach(el => {
+    sub += parseFloat(el.dataset.preco);
+    if (el.closest('#listaAvulsos')) qtdAvulso++;
+  });
+  const aviso = document.getElementById('avisoDesc');
+  const linhaD = document.getElementById('linhaDesc');
+  if (qtdAvulso === 2) {
+    desconto = sub * 0.05;
+    aviso.style.display = 'block';
+    aviso.innerText = '✅ Desconto de 5% aplicado (2 itens avulsos)';
+    linhaD.style.display = 'flex';
+  } else if (qtdAvulso >= 3) {
+    desconto = sub * 0.10;
+    aviso.style.display = 'block';
+    aviso.innerText = '🎉 Combo personalizado! Desconto de 10% aplicado';
+    linhaD.style.display = 'flex';
+  } else {
+    aviso.style.display = 'none';
+    linhaD.style.display = 'none';
+  }
+
+  // Desconto manual
+  const frete = parseFloat(document.getElementById('freteValor').value) || 0;
+  const subAposProg = sub - desconto;
+  const valDescManual = parseFloat(document.getElementById('descontoValor').value) || 0;
+  let descontoManual = 0;
+  const linhaDescM = document.getElementById('linhaDescManual');
+  const descRes = document.getElementById('descResultado');
+
+  if (valDescManual > 0) {
+    const base = subAposProg + frete;
+    if (tipoDesconto === 'pct') {
+      const pct = Math.min(valDescManual, 100);
+      descontoManual = base * (pct / 100);
+      descRes.innerText = 'Economia de ' + fmt(descontoManual) + ' (' + pct.toFixed(1) + '%)';
+    } else {
+      descontoManual = Math.min(valDescManual, base);
+      const pctEquiv = base > 0 ? (descontoManual / base * 100) : 0;
+      descRes.innerText = 'Equivale a ' + pctEquiv.toFixed(1) + '% do total';
+    }
+    document.getElementById('rDescontoManual').innerText = '— ' + fmt(descontoManual);
+    linhaDescM.style.display = 'flex';
+  } else {
+    linhaDescM.style.display = 'none';
+    descRes.innerText = '';
+  }
+
+  totalGlobal = (subAposProg + frete) - descontoManual;
+  if (totalGlobal < 0) totalGlobal = 0;
+
+  document.getElementById('rBrinquedos').innerText = fmt(sub);
+  document.getElementById('rDesconto').innerText = '— ' + fmt(desconto);
+  document.getElementById('rFrete').innerText = fmt(frete);
+  document.getElementById('rTotal').innerText = fmt(totalGlobal);
+  document.getElementById('rSaldo').innerText = fmt(Math.max(0, totalGlobal - 50));
+}
+
+function coletarDados() {
+  const itens = [];
+  document.querySelectorAll('.chk-item:checked').forEach(el => {
+    itens.push({ nome: el.dataset.nome, preco: parseFloat(el.dataset.preco) });
+  });
+  const dataBruta = document.getElementById('eventoData').value;
+  let dataF = 'Não informada';
+  if (dataBruta) {
+    const p = dataBruta.split('-');
+    dataF = p[2] + '/' + p[1] + '/' + p[0];
+  }
+  return {
+    id: Date.now(),
+    nome: document.getElementById('clienteNome').value.trim() || 'Não informado',
+    cpf: document.getElementById('clienteCPF').value.trim() || 'Não informado',
+    tel: document.getElementById('clienteTelefone').value.trim() || 'Não informado',
+    email: document.getElementById('clienteEmail').value.trim() || 'Não informado',
+    endCliente: document.getElementById('clienteEndereco').value.trim() || 'Não informado',
+    endFesta: document.getElementById('festaEndereco').value.trim() || document.getElementById('clienteEndereco').value.trim() || 'Não informado',
+    dataISO: dataBruta,
+    dataF: dataF,
+    hInicio: document.getElementById('horarioInicio').value || '--:--',
+    hTermino: document.getElementById('horarioTermino').value || '--:--',
+    itens: itens,
+    total: totalGlobal,
+    saldo: Math.max(0, totalGlobal - 50),
+    criadoEm: new Date().toLocaleDateString('pt-BR')
+  };
+}
+
+function salvarContrato() {
+  const itens = [];
+  document.querySelectorAll('.chk-item:checked').forEach(el => itens.push(el.dataset.nome));
+  if (!itens.length) { alert('Selecione pelo menos um brinquedo!'); return; }
+  const dados = coletarDados();
+  contratos.unshift(dados);
+  salvarLS();
+  alert('✅ Contrato de ' + dados.nome + ' salvo com sucesso!\n\nAcesse a aba "Contratos" ou "Agenda" para visualizar.');
+}
+
+function enviarWA() {
+  const dados = coletarDados();
+  if (!dados.itens.length) { alert('Selecione pelo menos um brinquedo!'); return; }
+  let msg = '🎡 *BRINQUEDU — ALUGUEL DE BRINQUEDOS* 🎡\n\nOlá, *' + dados.nome + '*! Segue seu orçamento personalizado:\n\n';
+  if (dados.dataF !== 'Não informada') msg += '📅 *Data do evento:* ' + dados.dataF + '\n';
+  msg += '⏰ *Horário:* ' + dados.hInicio + ' às ' + dados.hTermino + '\n';
+  if (dados.endFesta !== 'Não informado') msg += '📍 *Local:* ' + dados.endFesta + '\n';
+  msg += '\n📦 *Brinquedos selecionados:*\n• ' + dados.itens.map(i => i.nome).join('\n• ') + '\n\n';
+  msg += '━━━━━━━━━━━━━━━━━━━━\n';
+  msg += '💰 *Total da locação: ' + fmt(dados.total) + '*\n';
+  msg += '✅ *Sinal (reserva de data):* R$ 50,00\n';
+  msg += '💵 *Saldo restante:* ' + fmt(dados.saldo) + ' (pago na montagem)\n';
+  msg += '━━━━━━━━━━━━━━━━━━━━\n\nPosso garantir essa data para você? 🎉';
+  window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(msg), '_blank');
+}
+
+/* CONTRATOS */
+function filtrarContratos() {
+  const q = document.getElementById('buscaContrato').value.toLowerCase();
+  const filtrados = contratos.filter(c => c.nome.toLowerCase().includes(q) || c.dataF.includes(q));
+  renderContratos(filtrados);
+}
+
+function renderContratos(lista) {
+  lista = lista || contratos;
+  const el = document.getElementById('listaContratos');
+  if (!lista.length) {
+    el.innerHTML = '<div class="contratos-vazio"><div class="big">📁</div><p>Nenhum contrato salvo ainda.<br>Crie um orçamento e clique em <strong>Salvar Contrato</strong>.</p></div>';
+    return;
+  }
+  el.innerHTML = '<div class="contratos-grid">' + lista.map(c =>
+    '<div class="contrato-card">' +
+    '<div>' +
+    '<div class="contrato-nome">' + c.nome + '</div>' +
+    '<div class="contrato-meta">' +
+    (c.dataISO ? '<span class="tag tag-r">📅 ' + c.dataF + '</span>' : '') +
+    '<span class="tag">⏰ ' + c.hInicio + ' – ' + c.hTermino + '</span>' +
+    '<span class="tag">📍 ' + c.endFesta + '</span>' +
+    '<span class="tag">Salvo em ' + c.criadoEm + '</span>' +
+    '</div>' +
+    '<div class="contrato-itens">' + c.itens.map(i => '• ' + (i.nome || i) + ' (R$ ' + (i.preco || '—') + ')').join('<br>') + '</div>' +
+    '<div class="contrato-total">' + fmt(c.total) + '</div>' +
+    '</div>' +
+    '<div class="contrato-acoes">' +
+    '<button class="btn-sm btn-sm-r" onclick="verContrato(' + c.id + ')">👁 Ver</button>' +
+    '<button class="btn-sm btn-sm-cinza" onclick="waContrato(' + c.id + ')">📲 WA</button>' +
+    '<button class="btn-sm btn-sm-danger" onclick="excluirContrato(' + c.id + ')">🗑 Excluir</button>' +
+    '</div>' +
+    '</div>'
+  ).join('') + '</div>';
+}
+
+function excluirContrato(id) {
+  if (!confirm('Excluir este contrato?')) return;
+  contratos = contratos.filter(c => c.id !== id);
+  salvarLS();
+  renderContratos();
+}
+
+function verContrato(id) {
+  const c = contratos.find(x => x.id === id);
+  if (!c) return;
+  modalAtual = c;
+  document.getElementById('modalContratoConteudo').innerHTML = gerarHTMLContrato(c);
+  document.getElementById('modalContrato').classList.add('aberto');
+}
+
+function fecharModal() {
+  document.getElementById('modalContrato').classList.remove('aberto');
+  modalAtual = null;
+}
+
+function gerarHTMLContrato(c) {
+  const itensHtml = c.itens.map(i => '<p>• ' + (i.nome || i) + '</p>').join('');
+  return '<div class="ct-topo"><h1>CONTRATO DE LOCAÇÃO DE BRINQUEDOS</h1><p>BrinqueDu — Locação de Brinquedos para Festas</p></div>' +
+    '<div class="ct-secao"><h4>Dados da Empresa (Locador)</h4><div class="ct-caixa"><p><strong>Empresa:</strong> BrinqueDu — Locação de Brinquedos</p><p><strong>Responsável:</strong> Duilliam Mateus Amorim Aleixo</p><p><strong>CNPJ:</strong> 59.440.808/0001-32 &nbsp; <strong>CPF:</strong> 460.935.258-30</p></div></div>' +
+    '<div class="ct-secao"><h4>Dados do Cliente (Locatária)</h4><div class="ct-caixa"><p><strong>Nome:</strong> ' + c.nome + '</p><p><strong>CPF:</strong> ' + c.cpf + ' &nbsp; <strong>Tel:</strong> ' + c.tel + '</p><p><strong>E-mail:</strong> ' + c.email + '</p><p><strong>Endereço:</strong> ' + c.endCliente + '</p></div></div>' +
+    '<div class="ct-secao"><h4>Dados do Evento</h4><div class="ct-caixa"><p><strong>Local:</strong> ' + c.endFesta + '</p><p><strong>Data:</strong> ' + c.dataF + ' &nbsp; <strong>Horário:</strong> ' + c.hInicio + ' às ' + c.hTermino + '</p></div></div>' +
+    '<div class="ct-secao"><h4>Brinquedos Locados</h4><div class="ct-caixa">' + itensHtml + '</div></div>' +
+    '<div class="ct-secao"><h4>Valores</h4><div class="ct-valores"><div class="ct-valor-item"><div class="lbl">Total da Locação</div><div class="val">R$ ' + c.total.toFixed(2).replace('.', ',') + '</div></div><div class="ct-valor-item"><div class="lbl">Sinal (entrada)</div><div class="val">R$ 50,00</div></div><div class="ct-valor-item" style="grid-column:1/-1"><div class="lbl">Saldo Restante — pago no ato da montagem</div><div class="val">R$ ' + c.saldo.toFixed(2).replace('.', ',') + '</div></div></div></div>' +
+    '<div class="ct-secao"><h4>Cláusulas Contratuais e de Segurança</h4><div class="ct-clausulas">' +
+    '<p>1 — <strong>Instalação:</strong> O LOCADOR se responsabiliza pela entrega, montagem e retirada dos brinquedos no local combinado.</p>' +
+    '<p>2 — <strong>Uso correto:</strong> Os brinquedos devem ser utilizados apenas para fins recreativos infantis e conforme orientação de segurança.</p>' +
+    '<p>3 — <strong>Supervisão:</strong> O LOCATÁRIO é totalmente responsável pela supervisão das crianças durante todo o período de utilização.</p>' +
+    '<p>4 — <strong>Quantidade de usuários:</strong> Recomenda-se limitar a quantidade de crianças simultaneamente para evitar acidentes.</p>' +
+    '<p>5 — <strong>Regras de utilização:</strong> Não é permitido usar os brinquedos com sapatos, alimentos, bebidas ou objetos pontiagudos.</p>' +
+    '<p>6 — <strong>Condições climáticas:</strong> Em caso de chuva forte ou vento intenso, o uso deverá ser interrompido imediatamente.</p>' +
+    '<p>7 — <strong>Danos ao equipamento:</strong> O LOCATÁRIO é responsável por danos causados por mau uso ou negligência.</p>' +
+    '<p>8 — <strong>Cancelamento:</strong> Em caso de cancelamento pelo cliente, o valor da entrada poderá não ser devolvido.</p>' +
+    '<p>9 — <strong>Concordância:</strong> Ao assinar este contrato, ambas as partes declaram estar de acordo com todas as condições.</p>' +
+    '</div></div>' +
+    '<div class="ct-assinaturas"><div class="ct-assin-bloco">BrinqueDu — Locador<br>Duilliam Mateus Amorim Aleixo</div><div class="ct-assin-bloco">' + c.nome + '<br>Locatária</div></div>';
+}
+
+function imprimirContrato() {
+  const dados = coletarDados();
+  if (!dados.itens.length) { alert('Selecione pelo menos um brinquedo!'); return; }
+  document.getElementById('printArea').innerHTML = gerarHTMLContrato(dados);
+  window.print();
+}
+
+function imprimirModalContrato() {
+  if (!modalAtual) return;
+  document.getElementById('printArea').innerHTML = gerarHTMLContrato(modalAtual);
+  window.print();
+}
+
+function waContrato(id) {
+  const c = contratos.find(x => x.id === id);
+  if (!c) return;
+  let msg = '🎡 *BRINQUEDU — ALUGUEL DE BRINQUEDOS* 🎡\n\nOlá, *' + c.nome + '*! Segue seu orçamento:\n\n📅 *Data:* ' + c.dataF + '\n⏰ *Horário:* ' + c.hInicio + ' às ' + c.hTermino + '\n📍 *Local:* ' + c.endFesta + '\n\n📦 *Brinquedos:*\n• ' + c.itens.map(i => i.nome || i).join('\n• ') + '\n\n💰 *Total: ' + fmt(c.total) + '*\n✅ *Sinal:* R$ 50,00\n💵 *Saldo:* ' + fmt(c.saldo) + ' (na montagem)\n\nPosso confirmar? 🎉';
+  window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(msg), '_blank');
+}
+
+function whatsAppModal() {
+  if (modalAtual) waContrato(modalAtual.id);
+}
+
+/* AGENDA */
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function mudarMes(delta) {
+  mesAtual += delta;
+  if (mesAtual > 11) { mesAtual = 0; anoAtual++; }
+  if (mesAtual < 0) { mesAtual = 11; anoAtual--; }
+  renderAgenda();
+}
+
+function renderAgenda() {
+  document.getElementById('agendaTituloMes').textContent = MESES[mesAtual] + ' ' + anoAtual;
+  const hoje = new Date();
+  const primeiroDia = new Date(anoAtual, mesAtual, 1);
+  const ultimoDia = new Date(anoAtual, mesAtual + 1, 0);
+  const startDow = primeiroDia.getDay();
+
+  const eventosPorDia = {};
+  contratos.forEach(c => {
+    if (!c.dataISO) return;
+    const d = new Date(c.dataISO + 'T00:00:00');
+    if (d.getMonth() === mesAtual && d.getFullYear() === anoAtual) {
+      const k = d.getDate();
+      if (!eventosPorDia[k]) eventosPorDia[k] = [];
+      eventosPorDia[k].push(c);
+    }
+  });
+
+  let html = '';
+  for (let i = 0; i < startDow; i++) {
+    const d = new Date(anoAtual, mesAtual, 1 - startDow + i);
+    html += '<div class="cal-dia outro-mes"><div class="cal-num">' + d.getDate() + '</div></div>';
+  }
+  for (let d = 1; d <= ultimoDia.getDate(); d++) {
+    const isHoje = hoje.getDate() === d && hoje.getMonth() === mesAtual && hoje.getFullYear() === anoAtual;
+    const evs = eventosPorDia[d] || [];
+    const cls = 'cal-dia' + (isHoje ? ' hoje' : '') + (evs.length ? ' tem-evento' : '');
+    const numHtml = isHoje
+      ? '<div class="cal-num"><div style="background:var(--r);color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">' + d + '</div></div>'
+      : '<div class="cal-num">' + d + '</div>';
+    const evHtml = evs.slice(0, 2).map(e => '<div class="cal-evento-pill" onclick="scrollToEvento(' + e.id + ')">' + e.nome.split(' ')[0] + '</div>').join('');
+    const maisHtml = evs.length > 2 ? '<div class="cal-mais">+' + (evs.length - 2) + ' mais</div>' : '';
+    html += '<div class="' + cls + '">' + numHtml + evHtml + maisHtml + '</div>';
+  }
+  const totalCells = startDow + ultimoDia.getDate();
+  const resto = (7 - totalCells % 7) % 7;
+  for (let i = 1; i <= resto; i++) {
+    html += '<div class="cal-dia outro-mes"><div class="cal-num">' + i + '</div></div>';
+  }
+  document.getElementById('calGrid').innerHTML = html;
+
+  const contsMes = contratos.filter(c => {
+    if (!c.dataISO) return false;
+    const d = new Date(c.dataISO + 'T00:00:00');
+    return d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
+  }).sort((a, b) => a.dataISO.localeCompare(b.dataISO));
+
+  const listaEl = document.getElementById('eventosLista');
+  if (!contsMes.length) {
+    listaEl.innerHTML = '<div style="text-align:center;padding:32px;color:var(--c400);font-size:14px">Nenhuma locação em ' + MESES[mesAtual] + ' ' + anoAtual + '.</div>';
+    return;
+  }
+  listaEl.innerHTML = contsMes.map(c => {
+    const d = new Date(c.dataISO + 'T00:00:00');
+    return '<div class="evento-card" id="ev-' + c.id + '">' +
+      '<div class="evento-data-bloco"><div class="ev-dia">' + String(d.getDate()).padStart(2, '0') + '</div><div class="ev-mes">' + MESES[d.getMonth()].substring(0, 3).toUpperCase() + '</div></div>' +
+      '<div class="evento-info">' +
+      '<div class="ev-nome">' + c.nome + '</div>' +
+      '<div class="ev-detalhe">' +
+      '<span class="tag">⏰ ' + c.hInicio + ' – ' + c.hTermino + '</span>' +
+      (c.endFesta !== 'Não informado' ? '<span class="tag">📍 ' + c.endFesta + '</span>' : '') +
+      '<span class="tag">📞 ' + c.tel + '</span>' +
+      '</div>' +
+      '<div class="ev-itens">' + c.itens.map(i => '• ' + (i.nome || i)).join('<br>') + '</div>' +
+      '<div class="ev-total">' + fmt(c.total) + '</div>' +
+      '</div>' +
+      '</div>';
+  }).join('');
+}
+
+function scrollToEvento(id) {
+  const el = document.getElementById('ev-' + id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// Inicialização
+atualizarBadges();
+renderAgenda();
+</script>
+</body>
+</html>
