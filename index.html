@@ -70,7 +70,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--c100);color:var(--preto);
 .item-produto.selecionado .item-preco{color:var(--r)}
 
 /* SIDEBAR */
-.sidebar{position:sticky;top:78px}
+.sidebar{position:sticky;top:102px}
 .sidebar .card{padding:20px}
 .resumo-secao-titulo{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--c400);margin-bottom:10px}
 .resumo-linha{display:flex;justify-content:space-between;align-items:center;padding:7px 0;font-size:13px;color:var(--c600);border-bottom:1px dashed var(--c200)}
@@ -236,6 +236,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--c100);color:var(--preto);
     <button class="aba-btn" onclick="trocarAba('agenda',this)">📅 Agenda <span class="aba-badge" id="badge-agenda">0</span></button>
   </nav>
 </header>
+
+<!-- barra de status Firebase -->
+<div id="firebase-status-bar" style="background:#1e293b;color:#94a3b8;font-size:11px;font-family:'DM Sans',sans-serif;text-align:center;padding:5px 16px;letter-spacing:.3px;min-height:24px">
+  <span id="firebase-status">🔄 Conectando ao Firebase…</span>
+</div>
 
 <div class="pagina">
 
@@ -466,16 +471,73 @@ body{font-family:'DM Sans',sans-serif;background:var(--c100);color:var(--preto);
 <!-- ÁREA DE IMPRESSÃO -->
 <div id="printArea"></div>
 
-<script>
-let contratos = JSON.parse(localStorage.getItem('brinquedu_contratos') || '[]');
-let mesAtual = new Date().getMonth();
-let anoAtual = new Date().getFullYear();
-let totalGlobal = 0;
-let modalAtual = null;
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAnalytics }  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
+import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-function salvarLS() {
-  localStorage.setItem('brinquedu_contratos', JSON.stringify(contratos));
+const firebaseConfig = {
+  apiKey:            "AIzaSyC3n-cHo21V--0oxRBpXKLJE3cOwZ8yVOo",
+  authDomain:        "brinquedu-91068.firebaseapp.com",
+  projectId:         "brinquedu-91068",
+  storageBucket:     "brinquedu-91068.firebasestorage.app",
+  messagingSenderId: "5850589075",
+  appId:             "1:5850589075:web:472c597268f7e65788aa66",
+  measurementId:     "G-5267NQNH5G"
+};
+
+const app       = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const db        = getFirestore(app);
+const colRef = collection(db, "contratos");
+
+// ── estado global ──────────────────────────────────────────
+let contratos  = [];
+let mesAtual   = new Date().getMonth();
+let anoAtual   = new Date().getFullYear();
+let totalGlobal = 0;
+let modalAtual  = null;
+
+// ── indicador de carregamento ──────────────────────────────
+function setStatus(msg) {
+  const el = document.getElementById('firebase-status');
+  if (el) el.textContent = msg;
+}
+
+// ── escuta em tempo real o Firestore ──────────────────────
+const q = query(colRef, orderBy("id", "desc"));
+onSnapshot(q, (snapshot) => {
+  contratos = snapshot.docs.map(d => ({ _docId: d.id, ...d.data() }));
   atualizarBadges();
+  // atualiza a aba visível
+  if (document.getElementById('aba-contratos').classList.contains('ativa')) renderContratos();
+  if (document.getElementById('aba-agenda').classList.contains('ativa'))   renderAgenda();
+  setStatus('');
+}, (err) => {
+  setStatus('⚠️ Erro ao conectar com Firebase. Verifique as configurações.');
+  console.error(err);
+});
+
+// ── salvar no Firestore (substitui salvarLS) ───────────────
+async function salvarFirestore(dados) {
+  try {
+    setStatus('💾 Salvando…');
+    await addDoc(colRef, dados);
+    setStatus('');
+  } catch (e) {
+    setStatus('⚠️ Erro ao salvar: ' + e.message);
+    console.error(e);
+  }
+}
+
+// ── excluir do Firestore ───────────────────────────────────
+async function excluirFirestore(docId) {
+  try {
+    await deleteDoc(doc(db, "contratos", docId));
+  } catch (e) {
+    alert('Erro ao excluir: ' + e.message);
+  }
 }
 
 function trocarAba(id, btn) {
@@ -604,13 +666,12 @@ function coletarDados() {
   };
 }
 
-function salvarContrato() {
+async function salvarContrato() {
   const itens = [];
   document.querySelectorAll('.chk-item:checked').forEach(el => itens.push(el.dataset.nome));
   if (!itens.length) { alert('Selecione pelo menos um brinquedo!'); return; }
   const dados = coletarDados();
-  contratos.unshift(dados);
-  salvarLS();
+  await salvarFirestore(dados);
   alert('✅ Contrato de ' + dados.nome + ' salvo com sucesso!\n\nAcesse a aba "Contratos" ou "Agenda" para visualizar.');
 }
 
@@ -658,23 +719,22 @@ function renderContratos(lista) {
     '<div class="contrato-total">' + fmt(c.total) + '</div>' +
     '</div>' +
     '<div class="contrato-acoes">' +
-    '<button class="btn-sm btn-sm-r" onclick="verContrato(' + c.id + ')">👁 Ver</button>' +
-    '<button class="btn-sm btn-sm-cinza" onclick="waContrato(' + c.id + ')">📲 WA</button>' +
-    '<button class="btn-sm btn-sm-danger" onclick="excluirContrato(' + c.id + ')">🗑 Excluir</button>' +
+    '<button class="btn-sm btn-sm-r" onclick="verContrato(\'' + c._docId + '\')">👁 Ver</button>' +
+    '<button class="btn-sm btn-sm-cinza" onclick="waContrato(\'' + c._docId + '\')">📲 WA</button>' +
+    '<button class="btn-sm btn-sm-danger" onclick="excluirContrato(\'' + c._docId + '\')">🗑 Excluir</button>' +
     '</div>' +
     '</div>'
   ).join('') + '</div>';
 }
 
-function excluirContrato(id) {
+async function excluirContrato(docId) {
   if (!confirm('Excluir este contrato?')) return;
-  contratos = contratos.filter(c => c.id !== id);
-  salvarLS();
+  await excluirFirestore(docId);
   renderContratos();
 }
 
-function verContrato(id) {
-  const c = contratos.find(x => x.id === id);
+function verContrato(docId) {
+  const c = contratos.find(x => x._docId === docId);
   if (!c) return;
   modalAtual = c;
   document.getElementById('modalContratoConteudo').innerHTML = gerarHTMLContrato(c);
@@ -721,8 +781,8 @@ function imprimirModalContrato() {
   window.print();
 }
 
-function waContrato(id) {
-  const c = contratos.find(x => x.id === id);
+function waContrato(docId) {
+  const c = contratos.find(x => x._docId === docId);
   if (!c) return;
   let msg = '🎡 *BRINQUEDU — ALUGUEL DE BRINQUEDOS* 🎡\n\nOlá, *' + c.nome + '*! Segue seu orçamento:\n\n📅 *Data:* ' + c.dataF + '\n⏰ *Horário:* ' + c.hInicio + ' às ' + c.hTermino + '\n📍 *Local:* ' + c.endFesta + '\n\n📦 *Brinquedos:*\n• ' + c.itens.map(i => i.nome || i).join('\n• ') + '\n\n💰 *Total: ' + fmt(c.total) + '*\n✅ *Sinal:* R$ 50,00\n💵 *Saldo:* ' + fmt(c.saldo) + ' (na montagem)\n\nPosso confirmar? 🎉';
   window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(msg), '_blank');
@@ -817,7 +877,25 @@ function scrollToEvento(id) {
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-// Inicialização
+// ── expor funções para o HTML (necessário com type="module") ──
+window.trocarAba       = trocarAba;
+window.toggle          = toggle;
+window.setTipoDesconto = setTipoDesconto;
+window.calcular        = calcular;
+window.enviarWA        = enviarWA;
+window.salvarContrato  = salvarContrato;
+window.filtrarContratos= filtrarContratos;
+window.excluirContrato = excluirContrato;
+window.verContrato     = verContrato;
+window.fecharModal     = fecharModal;
+window.waContrato      = waContrato;
+window.whatsAppModal   = whatsAppModal;
+window.imprimirContrato      = imprimirContrato;
+window.imprimirModalContrato = imprimirModalContrato;
+window.mudarMes        = mudarMes;
+window.scrollToEvento  = scrollToEvento;
+
+// ── inicialização da UI ───────────────────────────────────
 atualizarBadges();
 renderAgenda();
 </script>
