@@ -205,6 +205,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--c100);color:var(--preto);
   #printArea .ct-valor-item .val{font-size:17px;font-weight:bold}
 }
 
+/* LOGIN */
+.login-overlay{position:fixed;inset:0;background:rgba(14,14,14,.97);z-index:9999;display:flex;align-items:center;justify-content:center}
+.login-box{background:#fff;border-radius:var(--radius-lg);padding:40px 36px;width:100%;max-width:380px;box-shadow:0 24px 64px rgba(0,0,0,.5)}
+.login-titulo{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;color:var(--preto);margin-bottom:4px;text-align:center}
+.login-sub{font-size:13px;color:var(--c600);margin-bottom:24px;text-align:center;line-height:1.5}
+.login-erro{background:#fee2e2;color:#991b1b;padding:9px 12px;border-radius:var(--radius);font-size:12px;margin-bottom:14px;display:none;border:1px solid #fecaca}
+
 /* RESPONSIVO */
 @media(max-width:900px){
   .grid-orc{grid-template-columns:1fr}
@@ -234,6 +241,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--c100);color:var(--preto);
     <button class="aba-btn ativa" onclick="trocarAba('orcamento',this)">📋 Orçamento</button>
     <button class="aba-btn" onclick="trocarAba('contratos',this)">📁 Contratos <span class="aba-badge" id="badge-contratos">0</span></button>
     <button class="aba-btn" onclick="trocarAba('agenda',this)">📅 Agenda <span class="aba-badge" id="badge-agenda">0</span></button>
+    <button class="aba-btn" onclick="fazerLogout()" title="Sair" style="color:var(--c400)">🔒 Sair</button>
   </nav>
 </header>
 
@@ -471,11 +479,28 @@ body{font-family:'DM Sans',sans-serif;background:var(--c100);color:var(--preto);
 <!-- ÁREA DE IMPRESSÃO -->
 <div id="printArea"></div>
 
+<!-- OVERLAY DE LOGIN -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="width:48px;height:48px;background:var(--r);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 12px">🎡</div>
+      <div class="login-titulo">BrinqueDu</div>
+      <div class="login-sub">Acesso restrito.<br>Faça login para continuar.</div>
+    </div>
+    <div class="login-erro" id="loginErro"></div>
+    <div class="form-grupo"><label>E-mail</label><input type="email" id="loginEmail" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')fazerLogin()"></div>
+    <div class="form-grupo"><label>Senha</label><input type="password" id="loginSenha" placeholder="••••••••" onkeydown="if(event.key==='Enter')fazerLogin()"></div>
+    <button class="btn btn-r" id="loginBtn" onclick="fazerLogin()" style="margin-top:8px">Entrar</button>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAnalytics }  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey:            "AIzaSyC3n-cHo21V--0oxRBpXKLJE3cOwZ8yVOo",
@@ -490,14 +515,60 @@ const firebaseConfig = {
 const app       = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const db        = getFirestore(app);
-const colRef = collection(db, "contratos");
+const auth      = getAuth(app);
+const colRef    = collection(db, "contratos");
+
+// ── SEGURANÇA: Escape HTML para prevenir XSS ───────────────
+function escHTML(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// ── SEGURANÇA: Criptografia AES-GCM para CPF (LGPD) ───────
+// !! IMPORTANTE: altere esta frase-chave para algo secreto e único !!
+const CPF_PASSPHRASE = 'BrinqueDu-chave-privada-ALTERE-ISSO';
+
+async function getCPFKey() {
+  const enc = new TextEncoder();
+  const raw = await crypto.subtle.importKey('raw', enc.encode(CPF_PASSPHRASE), { name: 'PBKDF2' }, false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: enc.encode('brinquedu-cpf-salt-v1'), iterations: 150000, hash: 'SHA-256' },
+    raw, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
+  );
+}
+
+async function encryptCPF(cpf) {
+  if (!cpf || cpf === 'Não informado') return cpf;
+  const key = await getCPFKey();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(cpf));
+  const buf = new Uint8Array(iv.length + ct.byteLength);
+  buf.set(iv); buf.set(new Uint8Array(ct), iv.length);
+  return '__enc__' + btoa(String.fromCharCode(...buf));
+}
+
+async function decryptCPF(val) {
+  if (!val || val === 'Não informado' || !val.startsWith('__enc__')) return val;
+  try {
+    const key = await getCPFKey();
+    const buf = Uint8Array.from(atob(val.slice(7)), c => c.charCodeAt(0));
+    const dec = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, key, buf.slice(12));
+    return new TextDecoder().decode(dec);
+  } catch { return '***'; }
+}
 
 // ── estado global ──────────────────────────────────────────
-let contratos  = [];
-let mesAtual   = new Date().getMonth();
-let anoAtual   = new Date().getFullYear();
+let contratos   = [];
+let mesAtual    = new Date().getMonth();
+let anoAtual    = new Date().getFullYear();
 let totalGlobal = 0;
 let modalAtual  = null;
+let unsubscribe = null;
 
 // ── indicador de carregamento ──────────────────────────────
 function setStatus(msg) {
@@ -505,25 +576,72 @@ function setStatus(msg) {
   if (el) el.textContent = msg;
 }
 
-// ── escuta em tempo real o Firestore ──────────────────────
-const q = query(colRef, orderBy("id", "desc"));
-onSnapshot(q, (snapshot) => {
-  contratos = snapshot.docs.map(d => ({ _docId: d.id, ...d.data() }));
-  atualizarBadges();
-  // atualiza a aba visível
-  if (document.getElementById('aba-contratos').classList.contains('ativa')) renderContratos();
-  if (document.getElementById('aba-agenda').classList.contains('ativa'))   renderAgenda();
-  setStatus('');
-}, (err) => {
-  setStatus('⚠️ Erro ao conectar com Firebase. Verifique as configurações.');
-  console.error(err);
+// ── autenticação: login / logout ───────────────────────────
+async function fazerLogin() {
+  const btn  = document.getElementById('loginBtn');
+  const erro = document.getElementById('loginErro');
+  const email = document.getElementById('loginEmail').value.trim();
+  const senha = document.getElementById('loginSenha').value;
+  erro.style.display = 'none';
+  btn.textContent = 'Entrando…'; btn.disabled = true;
+  try {
+    await signInWithEmailAndPassword(auth, email, senha);
+  } catch(e) {
+    erro.textContent = 'E-mail ou senha incorretos. Tente novamente.';
+    erro.style.display = 'block';
+    btn.textContent = 'Entrar'; btn.disabled = false;
+  }
+}
+
+async function fazerLogout() {
+  if (!confirm('Deseja sair?')) return;
+  if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+  contratos = [];
+  await signOut(auth);
+}
+
+// ── inicia o listener do Firestore (só após login) ─────────
+function iniciarApp() {
+  if (unsubscribe) return;
+  const q = query(colRef, orderBy("id", "desc"));
+  unsubscribe = onSnapshot(q, async (snapshot) => {
+    contratos = await Promise.all(snapshot.docs.map(async d => {
+      const data = d.data();
+      return { _docId: d.id, ...data, cpf: await decryptCPF(data.cpf) };
+    }));
+    atualizarBadges();
+    if (document.getElementById('aba-contratos').classList.contains('ativa')) renderContratos();
+    if (document.getElementById('aba-agenda').classList.contains('ativa'))   renderAgenda();
+    setStatus('');
+  }, (err) => {
+    setStatus('⚠️ Erro ao conectar com Firebase. Verifique as configurações.');
+    console.error(err);
+  });
+}
+
+// ── controla exibição do app conforme estado de auth ───────
+onAuthStateChanged(auth, (user) => {
+  const overlay = document.getElementById('loginOverlay');
+  if (user) {
+    overlay.style.display = 'none';
+    setStatus('✅ Conectado como ' + user.email);
+    iniciarApp();
+    atualizarBadges();
+    renderAgenda();
+  } else {
+    overlay.style.display = 'flex';
+    contratos = [];
+    atualizarBadges();
+    setStatus('🔒 Não autenticado.');
+  }
 });
 
 // ── salvar no Firestore (substitui salvarLS) ───────────────
 async function salvarFirestore(dados) {
   try {
     setStatus('💾 Salvando…');
-    await addDoc(colRef, dados);
+    const dadosSeguros = { ...dados, cpf: await encryptCPF(dados.cpf) };
+    await addDoc(colRef, dadosSeguros);
     setStatus('');
   } catch (e) {
     setStatus('⚠️ Erro ao salvar: ' + e.message);
@@ -708,20 +826,20 @@ function renderContratos(lista) {
   el.innerHTML = '<div class="contratos-grid">' + lista.map(c =>
     '<div class="contrato-card">' +
     '<div>' +
-    '<div class="contrato-nome">' + c.nome + '</div>' +
+    '<div class="contrato-nome">' + escHTML(c.nome) + '</div>' +
     '<div class="contrato-meta">' +
-    (c.dataISO ? '<span class="tag tag-r">📅 ' + c.dataF + '</span>' : '') +
-    '<span class="tag">⏰ ' + c.hInicio + ' – ' + c.hTermino + '</span>' +
-    '<span class="tag">📍 ' + c.endFesta + '</span>' +
-    '<span class="tag">Salvo em ' + c.criadoEm + '</span>' +
+    (c.dataISO ? '<span class="tag tag-r">📅 ' + escHTML(c.dataF) + '</span>' : '') +
+    '<span class="tag">⏰ ' + escHTML(c.hInicio) + ' – ' + escHTML(c.hTermino) + '</span>' +
+    '<span class="tag">📍 ' + escHTML(c.endFesta) + '</span>' +
+    '<span class="tag">Salvo em ' + escHTML(c.criadoEm) + '</span>' +
     '</div>' +
-    '<div class="contrato-itens">' + c.itens.map(i => '• ' + (i.nome || i) + ' (R$ ' + (i.preco || '—') + ')').join('<br>') + '</div>' +
+    '<div class="contrato-itens">' + c.itens.map(i => '• ' + escHTML(i.nome || i) + ' (R$ ' + escHTML(String(i.preco || '—')) + ')').join('<br>') + '</div>' +
     '<div class="contrato-total">' + fmt(c.total) + '</div>' +
     '</div>' +
     '<div class="contrato-acoes">' +
-    '<button class="btn-sm btn-sm-r" onclick="verContrato(\'' + c._docId + '\')">👁 Ver</button>' +
-    '<button class="btn-sm btn-sm-cinza" onclick="waContrato(\'' + c._docId + '\')">📲 WA</button>' +
-    '<button class="btn-sm btn-sm-danger" onclick="excluirContrato(\'' + c._docId + '\')">🗑 Excluir</button>' +
+    '<button class="btn-sm btn-sm-r" onclick="verContrato(\'' + escHTML(c._docId) + '\')">👁 Ver</button>' +
+    '<button class="btn-sm btn-sm-cinza" onclick="waContrato(\'' + escHTML(c._docId) + '\')">📲 WA</button>' +
+    '<button class="btn-sm btn-sm-danger" onclick="excluirContrato(\'' + escHTML(c._docId) + '\')">🗑 Excluir</button>' +
     '</div>' +
     '</div>'
   ).join('') + '</div>';
@@ -747,11 +865,11 @@ function fecharModal() {
 }
 
 function gerarHTMLContrato(c) {
-  const itensHtml = c.itens.map(i => '<p>• ' + (i.nome || i) + '</p>').join('');
+  const itensHtml = c.itens.map(i => '<p>• ' + escHTML(i.nome || i) + '</p>').join('');
   return '<div class="ct-topo"><h1>CONTRATO DE LOCAÇÃO DE BRINQUEDOS</h1><p>BrinqueDu — Locação de Brinquedos para Festas</p></div>' +
     '<div class="ct-secao"><h4>Dados da Empresa (Locador)</h4><div class="ct-caixa"><p><strong>Empresa:</strong> BrinqueDu — Locação de Brinquedos</p><p><strong>Responsável:</strong> Duilliam Mateus Amorim Aleixo</p><p><strong>CNPJ:</strong> 59.440.808/0001-32 &nbsp; <strong>CPF:</strong> 460.935.258-30</p></div></div>' +
-    '<div class="ct-secao"><h4>Dados do Cliente (Locatária)</h4><div class="ct-caixa"><p><strong>Nome:</strong> ' + c.nome + '</p><p><strong>CPF:</strong> ' + c.cpf + ' &nbsp; <strong>Tel:</strong> ' + c.tel + '</p><p><strong>E-mail:</strong> ' + c.email + '</p><p><strong>Endereço:</strong> ' + c.endCliente + '</p></div></div>' +
-    '<div class="ct-secao"><h4>Dados do Evento</h4><div class="ct-caixa"><p><strong>Local:</strong> ' + c.endFesta + '</p><p><strong>Data:</strong> ' + c.dataF + ' &nbsp; <strong>Horário:</strong> ' + c.hInicio + ' às ' + c.hTermino + '</p></div></div>' +
+    '<div class="ct-secao"><h4>Dados do Cliente (Locatária)</h4><div class="ct-caixa"><p><strong>Nome:</strong> ' + escHTML(c.nome) + '</p><p><strong>CPF:</strong> ' + escHTML(c.cpf) + ' &nbsp; <strong>Tel:</strong> ' + escHTML(c.tel) + '</p><p><strong>E-mail:</strong> ' + escHTML(c.email) + '</p><p><strong>Endereço:</strong> ' + escHTML(c.endCliente) + '</p></div></div>' +
+    '<div class="ct-secao"><h4>Dados do Evento</h4><div class="ct-caixa"><p><strong>Local:</strong> ' + escHTML(c.endFesta) + '</p><p><strong>Data:</strong> ' + escHTML(c.dataF) + ' &nbsp; <strong>Horário:</strong> ' + escHTML(c.hInicio) + ' às ' + escHTML(c.hTermino) + '</p></div></div>' +
     '<div class="ct-secao"><h4>Brinquedos Locados</h4><div class="ct-caixa">' + itensHtml + '</div></div>' +
     '<div class="ct-secao"><h4>Valores</h4><div class="ct-valores"><div class="ct-valor-item"><div class="lbl">Total da Locação</div><div class="val">R$ ' + c.total.toFixed(2).replace('.', ',') + '</div></div><div class="ct-valor-item"><div class="lbl">Sinal (entrada)</div><div class="val">R$ 50,00</div></div><div class="ct-valor-item" style="grid-column:1/-1"><div class="lbl">Saldo Restante — pago no ato da montagem</div><div class="val">R$ ' + c.saldo.toFixed(2).replace('.', ',') + '</div></div></div></div>' +
     '<div class="ct-secao"><h4>Cláusulas Contratuais e de Segurança</h4><div class="ct-clausulas">' +
@@ -765,7 +883,7 @@ function gerarHTMLContrato(c) {
     '<p>8 — <strong>Cancelamento:</strong> Em caso de cancelamento pelo cliente, o valor da entrada poderá não ser devolvido.</p>' +
     '<p>9 — <strong>Concordância:</strong> Ao assinar este contrato, ambas as partes declaram estar de acordo com todas as condições.</p>' +
     '</div></div>' +
-    '<div class="ct-assinaturas"><div class="ct-assin-bloco">BrinqueDu — Locador<br>Duilliam Mateus Amorim Aleixo</div><div class="ct-assin-bloco">' + c.nome + '<br>Locatária</div></div>';
+    '<div class="ct-assinaturas"><div class="ct-assin-bloco">BrinqueDu — Locador<br>Duilliam Mateus Amorim Aleixo</div><div class="ct-assin-bloco">' + escHTML(c.nome) + '<br>Locatária</div></div>';
 }
 
 function imprimirContrato() {
@@ -832,7 +950,7 @@ function renderAgenda() {
     const numHtml = isHoje
       ? '<div class="cal-num"><div style="background:var(--r);color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">' + d + '</div></div>'
       : '<div class="cal-num">' + d + '</div>';
-    const evHtml = evs.slice(0, 2).map(e => '<div class="cal-evento-pill" onclick="scrollToEvento(' + e.id + ')">' + e.nome.split(' ')[0] + '</div>').join('');
+    const evHtml = evs.slice(0, 2).map(e => '<div class="cal-evento-pill" onclick="scrollToEvento(' + e.id + ')">' + escHTML(e.nome.split(' ')[0]) + '</div>').join('');
     const maisHtml = evs.length > 2 ? '<div class="cal-mais">+' + (evs.length - 2) + ' mais</div>' : '';
     html += '<div class="' + cls + '">' + numHtml + evHtml + maisHtml + '</div>';
   }
@@ -859,13 +977,13 @@ function renderAgenda() {
     return '<div class="evento-card" id="ev-' + c.id + '">' +
       '<div class="evento-data-bloco"><div class="ev-dia">' + String(d.getDate()).padStart(2, '0') + '</div><div class="ev-mes">' + MESES[d.getMonth()].substring(0, 3).toUpperCase() + '</div></div>' +
       '<div class="evento-info">' +
-      '<div class="ev-nome">' + c.nome + '</div>' +
+      '<div class="ev-nome">' + escHTML(c.nome) + '</div>' +
       '<div class="ev-detalhe">' +
-      '<span class="tag">⏰ ' + c.hInicio + ' – ' + c.hTermino + '</span>' +
-      (c.endFesta !== 'Não informado' ? '<span class="tag">📍 ' + c.endFesta + '</span>' : '') +
-      '<span class="tag">📞 ' + c.tel + '</span>' +
+      '<span class="tag">⏰ ' + escHTML(c.hInicio) + ' – ' + escHTML(c.hTermino) + '</span>' +
+      (c.endFesta !== 'Não informado' ? '<span class="tag">📍 ' + escHTML(c.endFesta) + '</span>' : '') +
+      '<span class="tag">📞 ' + escHTML(c.tel) + '</span>' +
       '</div>' +
-      '<div class="ev-itens">' + c.itens.map(i => '• ' + (i.nome || i)).join('<br>') + '</div>' +
+      '<div class="ev-itens">' + c.itens.map(i => '• ' + escHTML(i.nome || i)).join('<br>') + '</div>' +
       '<div class="ev-total">' + fmt(c.total) + '</div>' +
       '</div>' +
       '</div>';
@@ -894,10 +1012,11 @@ window.imprimirContrato      = imprimirContrato;
 window.imprimirModalContrato = imprimirModalContrato;
 window.mudarMes        = mudarMes;
 window.scrollToEvento  = scrollToEvento;
+window.fazerLogin      = fazerLogin;
+window.fazerLogout     = fazerLogout;
 
-// ── inicialização da UI ───────────────────────────────────
-atualizarBadges();
-renderAgenda();
+// ── inicialização: aguarda onAuthStateChanged ─────────────
+// (renderAgenda e atualizarBadges são chamados dentro de onAuthStateChanged)
 </script>
 </body>
 </html>
