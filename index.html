@@ -73,6 +73,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--c100);color:var(--preto);
 .item-preco{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:var(--c600);white-space:nowrap;margin-left:10px;flex-shrink:0}
 .item-produto.selecionado .item-preco{color:var(--r)}
 
+/* ── MONITOR QTD ITEM ── */
+.item-produto-monitor{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:var(--radius);border:1.5px solid var(--c200);transition:border-color .15s,background .15s;background:var(--c100);cursor:default}
+.item-produto-monitor.ativo{border-color:var(--r);background:var(--r-bg)}
+.monitor-qtd-ctrl{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.monitor-btn{width:28px;height:28px;border-radius:7px;border:none;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;line-height:1;transition:background .15s,transform .1s;flex-shrink:0}
+.monitor-btn:active{transform:scale(.92)}
+.monitor-btn-minus{background:var(--c200);color:var(--c800)}
+.monitor-btn-minus:hover{background:var(--c300)}
+.monitor-btn-plus{background:var(--r);color:#fff}
+.monitor-btn-plus:hover{background:var(--r-dark)}
+.monitor-qtd-num{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;color:var(--preto);min-width:22px;text-align:center;transition:color .15s}
+
 /* ── SIDEBAR ── */
 .sidebar{position:sticky;top:102px}
 .sidebar .card{padding:20px}
@@ -400,7 +412,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--c100);color:var(--preto);
       </div>
 
       <div class="card">
-        <div class="card-titulo"><span class="num-badge">3</span> Atrações Avulsas <small style="font-family:'DM Sans';font-size:11px;color:var(--c400);font-weight:400;text-transform:none;letter-spacing:0">(desconto progressivo)</small></div>
+        <div class="card-titulo"><span class="num-badge">3</span> Atrações Avulsas <small style="font-family:'DM Sans';font-size:11px;color:var(--c400);font-weight:400;text-transform:none;letter-spacing:0">(5% de desconto a partir de 2 itens)</small></div>
         <div class="lista-produtos" id="listaAvulsos">
           <label class="item-produto" onclick="toggle(this)">
             <input type="checkbox" class="chk-item" data-nome="Mini Tobogã + Piscina Inflável" data-preco="350">
@@ -456,12 +468,23 @@ body{font-family:'DM Sans',sans-serif;background:var(--c100);color:var(--preto);
             <div class="item-info-wrap"><span class="item-emoji">🎠</span><span class="item-nome">Gangorrinha / Cavalo</span></div>
             <span class="item-preco">R$ 50</span>
           </label>
-          <label class="item-produto" onclick="toggle(this)">
-            <input type="checkbox" class="chk-item" data-nome="Monitor de Brinquedos" data-preco="100">
-            <div class="item-check"><span class="item-check-icon">✓</span></div>
-            <div class="item-info-wrap"><span class="item-emoji">👤</span><span class="item-nome">Monitor de Brinquedos</span></div>
-            <span class="item-preco">R$ 100</span>
-          </label>
+
+          <!-- ── MONITOR COM SELETOR DE QUANTIDADE ── -->
+          <div class="item-produto-monitor" id="monitor-row">
+            <div class="item-info-wrap">
+              <span class="item-emoji">👤</span>
+              <span class="item-nome" id="monitor-nome-label">Monitor de Brinquedos</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;flex-shrink:0">
+              <span class="item-preco" style="color:var(--c600)" id="monitor-preco-label">R$ 100 / un.</span>
+              <div class="monitor-qtd-ctrl">
+                <button class="monitor-btn monitor-btn-minus" onclick="alterarMonitor(-1)" title="Remover monitor">−</button>
+                <span class="monitor-qtd-num" id="monitorQtd">0</span>
+                <button class="monitor-btn monitor-btn-plus" onclick="alterarMonitor(1)" title="Adicionar monitor">+</button>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -472,7 +495,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--c100);color:var(--preto);
         <div class="card-titulo">Resumo do Orçamento</div>
         <div class="resumo-secao-titulo">Composição</div>
         <div class="resumo-linha"><span>Subtotal dos itens</span><strong id="rBrinquedos">R$ 0,00</strong></div>
-        <div class="desconto-linha" id="linhaDesc"><span>Desconto progressivo</span><strong id="rDesconto" style="color:var(--ok)">— R$ 0,00</strong></div>
+        <div class="desconto-linha" id="linhaDesc"><span>Desconto progressivo (5%)</span><strong id="rDesconto" style="color:var(--ok)">— R$ 0,00</strong></div>
         <div class="desconto-linha" id="linhaDescManual" style="display:none"><span>Desconto adicional</span><strong id="rDescontoManual" style="color:var(--ok)">— R$ 0,00</strong></div>
         <div class="resumo-linha"><span>Frete / Deslocamento</span><strong id="rFrete">R$ 0,00</strong></div>
         <div class="alerta-desconto" id="avisoDesc"></div>
@@ -552,7 +575,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--c100);color:var(--preto);
 ════════════════════════════════════════════ -->
 <div class="aba-conteudo" id="aba-financeiro">
 
-  <!-- Cabeçalho e navegação de mês -->
   <div class="fin-top">
     <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:22px;color:var(--preto)">Financeiro</div>
     <div class="fin-mes-nav">
@@ -562,7 +584,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--c100);color:var(--preto);
     </div>
   </div>
 
-  <!-- Cards de resumo -->
   <div class="fin-resumo-cards">
     <div class="fin-resumo-card frc-entradas">
       <div class="frc-label">💰 Entradas do Mês</div>
@@ -581,7 +602,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--c100);color:var(--preto);
     </div>
   </div>
 
-  <!-- Sub-tabs -->
   <div class="fin-subtabs">
     <button class="fin-subtab ativa" onclick="trocarSubAba('entradas',this)">💰 Entradas</button>
     <button class="fin-subtab" onclick="trocarSubAba('saidas',this)">💸 Saídas</button>
@@ -590,25 +610,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--c100);color:var(--preto);
   <!-- ── ENTRADAS ── -->
   <div class="fin-secao ativa" id="fin-entradas">
     <div class="fin-layout">
-
-      <!-- Formulário de entrada -->
       <div class="fin-form-card">
         <div class="fin-form-titulo">Registrar Entrada</div>
-
         <div class="form-grupo">
           <label>Contrato vinculado</label>
           <select id="entradaContratoSelect" onchange="onContratoSelecionado()">
             <option value="">— Sem vínculo (entrada avulsa) —</option>
           </select>
         </div>
-
         <div id="contratoStatusBox"></div>
-
         <div class="form-grupo">
           <label>Data do Recebimento</label>
           <input type="date" id="entradaData">
         </div>
-
         <div class="fin-form-titulo" style="margin-top:4px;margin-bottom:10px">Formas de Pagamento</div>
         <div class="prow-container" id="prowContainer">
           <div class="prow" id="prow-1">
@@ -624,21 +638,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--c100);color:var(--preto);
           </div>
         </div>
         <button class="btn-add-prow" onclick="adicionarProw()">+ Adicionar outra forma de pagamento</button>
-
         <div class="total-sessao-box" style="margin-top:10px">
           <span class="total-sessao-label">Total desta entrada</span>
           <span class="total-sessao-valor" id="totalSessaoValor">R$ 0,00</span>
         </div>
-
         <div class="form-grupo" style="margin-bottom:0">
           <label>Observação (opcional)</label>
           <input type="text" id="entradaObs" placeholder="Ex: Sinal de reserva">
         </div>
-
         <button class="btn btn-ok" onclick="salvarEntrada()" style="margin-top:14px;margin-bottom:0">💾 Registrar Entrada</button>
       </div>
-
-      <!-- Tabela de entradas -->
       <div class="fin-table-card">
         <div class="fin-table-header">
           <span class="fin-table-titulo">Histórico de Entradas</span>
@@ -646,28 +655,22 @@ body{font-family:'DM Sans',sans-serif;background:var(--c100);color:var(--preto);
         </div>
         <div id="entradasLista"></div>
       </div>
-
     </div>
-  </div><!-- /fin-entradas -->
+  </div>
 
   <!-- ── SAÍDAS ── -->
   <div class="fin-secao" id="fin-saidas">
     <div class="fin-layout">
-
-      <!-- Formulário de saída -->
       <div class="fin-form-card">
         <div class="fin-form-titulo">Registrar Saída</div>
-
         <div class="form-grupo">
           <label>Valor (R$)</label>
           <input type="number" id="saidaValor" min="0" step="0.01" placeholder="0,00">
         </div>
-
         <div class="form-grupo">
           <label>Destino / Descrição</label>
           <input type="text" id="saidaDestino" placeholder="Ex: Combustível, Manutenção, Fornecedor…">
         </div>
-
         <div class="form-grupo">
           <label>Forma de Pagamento</label>
           <select id="saidaForma">
@@ -679,21 +682,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--c100);color:var(--preto);
             <option value="cheque">📄 Cheque</option>
           </select>
         </div>
-
         <div class="form-grupo">
           <label>Data</label>
           <input type="date" id="saidaData">
         </div>
-
         <div class="form-grupo" style="margin-bottom:0">
           <label>Observação (opcional)</label>
           <input type="text" id="saidaObs" placeholder="Detalhes adicionais">
         </div>
-
         <button class="btn btn-r" onclick="salvarSaida()" style="margin-top:14px;margin-bottom:0">💾 Registrar Saída</button>
       </div>
-
-      <!-- Tabela de saídas -->
       <div class="fin-table-card">
         <div class="fin-table-header">
           <span class="fin-table-titulo">Histórico de Saídas</span>
@@ -701,9 +699,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--c100);color:var(--preto);
         </div>
         <div id="saidasLista"></div>
       </div>
-
     </div>
-  </div><!-- /fin-saidas -->
+  </div>
 
 </div><!-- /aba-financeiro -->
 
@@ -769,7 +766,6 @@ const analytics = getAnalytics(app);
 const db        = getFirestore(app);
 const auth      = getAuth(app);
 
-// Coleções
 const colContratos = collection(db, "contratos");
 const colEntradas  = collection(db, "entradas");
 const colSaidas    = collection(db, "saidas");
@@ -815,7 +811,7 @@ async function decryptCPF(val) {
 let contratos  = [];
 let entradas   = [];
 let saidas     = [];
-let pagamentosPorContrato = {};   // { contratoDocId: totalPago }
+let pagamentosPorContrato = {};
 
 let mesAtual     = new Date().getMonth();
 let anoAtual     = new Date().getFullYear();
@@ -824,6 +820,9 @@ let anoFin       = new Date().getFullYear();
 let totalGlobal  = 0;
 let modalAtual   = null;
 let prowCount    = 1;
+
+// Quantidade de monitores selecionados
+let monitorQtd = 0;
 
 let unsubContratos = null;
 let unsubEntradas  = null;
@@ -877,7 +876,7 @@ function recalcPagamentos() {
   });
 }
 
-// ── Próximo número de contrato (transação Firestore) ─────
+// ── Próximo número de contrato ────────────────────────────
 async function getNextContractNumber() {
   const counterRef = doc(db, "meta", "contadores");
   let numero = 1;
@@ -893,7 +892,6 @@ async function getNextContractNumber() {
       }
     });
   } catch(e) {
-    // fallback: usa timestamp como número se a transação falhar
     numero = Date.now();
     console.warn('Erro ao gerar número de contrato:', e);
   }
@@ -930,7 +928,6 @@ async function fazerLogout() {
 function iniciarApp() {
   if (unsubContratos) return;
 
-  // Contratos
   const qC = query(colContratos, orderBy("id","desc"));
   unsubContratos = onSnapshot(qC, async snap => {
     contratos = await Promise.all(snap.docs.map(async d => {
@@ -946,7 +943,6 @@ function iniciarApp() {
     setStatus('⚠️ Erro Firebase: ' + err.message);
   });
 
-  // Entradas
   const qE = query(colEntradas, orderBy("criadoEmMs","desc"));
   unsubEntradas = onSnapshot(qE, snap => {
     entradas = snap.docs.map(d => ({ _docId: d.id, ...d.data() }));
@@ -955,7 +951,6 @@ function iniciarApp() {
     renderActiveTab();
   });
 
-  // Saídas
   const qS = query(colSaidas, orderBy("criadoEmMs","desc"));
   unsubSaidas = onSnapshot(qS, snap => {
     saidas = snap.docs.map(d => ({ _docId: d.id, ...d.data() }));
@@ -969,7 +964,6 @@ onAuthStateChanged(auth, user => {
     overlay.style.display = 'none';
     setStatus('✅ Conectado como ' + user.email);
     iniciarApp();
-    // Inicializar datas padrão dos formulários
     document.getElementById('entradaData').value = dataHoje();
     document.getElementById('saidaData').value   = dataHoje();
     atualizarBadges();
@@ -985,7 +979,6 @@ onAuthStateChanged(auth, user => {
   }
 });
 
-// ── Aba ativa: qual renderizar ────────────────────────────
 function renderActiveTab() {
   const ids = ['contratos','agenda','financeiro'];
   for (const id of ids) {
@@ -998,7 +991,6 @@ function renderActiveTab() {
   }
 }
 
-// ── Navegação de abas ─────────────────────────────────────
 function trocarAba(id, btn) {
   document.querySelectorAll('.aba-conteudo').forEach(a => a.classList.remove('ativa'));
   document.querySelectorAll('.aba-btn').forEach(b => b.classList.remove('ativa'));
@@ -1023,6 +1015,27 @@ function atualizarBadges() {
   const badgeFin = document.getElementById('badge-financeiro');
   if (pendentes > 0) { badgeFin.textContent = pendentes; badgeFin.className = 'aba-badge'; }
   else { badgeFin.textContent = ''; }
+}
+
+// ── MONITOR: alterar quantidade ───────────────────────────
+function alterarMonitor(delta) {
+  monitorQtd = Math.max(0, Math.min(10, monitorQtd + delta));
+  const el  = document.getElementById('monitorQtd');
+  const row = document.getElementById('monitor-row');
+  const lbl = document.getElementById('monitor-nome-label');
+  const prc = document.getElementById('monitor-preco-label');
+  if (el)  el.textContent = monitorQtd;
+  if (row) {
+    row.classList.toggle('ativo', monitorQtd > 0);
+  }
+  if (lbl) lbl.textContent = monitorQtd > 1
+    ? 'Monitor de Brinquedos ×' + monitorQtd
+    : 'Monitor de Brinquedos';
+  if (prc) prc.textContent = monitorQtd > 1
+    ? 'R$ ' + (monitorQtd * 100) + ',00'
+    : 'R$ 100 / un.';
+  if (prc) prc.style.color = monitorQtd > 0 ? 'var(--r)' : 'var(--c600)';
+  calcular();
 }
 
 // ── ORÇAMENTO: cálculo ────────────────────────────────────
@@ -1051,17 +1064,17 @@ function calcular() {
     sub += parseFloat(el.dataset.preco);
     if (el.closest('#listaAvulsos')) qtdAvulso++;
   });
+
+  // Somar monitores ao subtotal
+  sub += monitorQtd * 100;
+
+  // ── Desconto progressivo: sempre 5% para 2 ou mais avulsos ──
   const aviso  = document.getElementById('avisoDesc');
   const linhaD = document.getElementById('linhaDesc');
-  if (qtdAvulso === 2) {
+  if (qtdAvulso >= 2) {
     desconto = sub * 0.05;
     aviso.style.display = 'block';
-    aviso.innerText = '✅ Desconto de 5% aplicado (2 itens avulsos)';
-    linhaD.style.display = 'flex';
-  } else if (qtdAvulso >= 3) {
-    desconto = sub * 0.10;
-    aviso.style.display = 'block';
-    aviso.innerText = '🎉 Combo personalizado! Desconto de 10% aplicado';
+    aviso.innerText = '✅ Desconto de 5% aplicado (' + qtdAvulso + ' itens avulsos)';
     linhaD.style.display = 'flex';
   } else {
     aviso.style.display = 'none';
@@ -1106,6 +1119,13 @@ function coletarDados() {
   document.querySelectorAll('.chk-item:checked').forEach(el => {
     itens.push({ nome: el.dataset.nome, preco: parseFloat(el.dataset.preco) });
   });
+  // Incluir monitores nos itens
+  if (monitorQtd > 0) {
+    itens.push({
+      nome:  'Monitor de Brinquedos' + (monitorQtd > 1 ? ' (×' + monitorQtd + ')' : ''),
+      preco: monitorQtd * 100
+    });
+  }
   const dataBruta = document.getElementById('eventoData').value;
   let dataF = 'Não informada';
   if (dataBruta) { const p = dataBruta.split('-'); dataF = p[2]+'/'+p[1]+'/'+p[0]; }
@@ -1131,7 +1151,7 @@ function coletarDados() {
 async function salvarContrato() {
   const itens = [];
   document.querySelectorAll('.chk-item:checked').forEach(el => itens.push(el.dataset.nome));
-  if (!itens.length) { alert('Selecione pelo menos um brinquedo!'); return; }
+  if (!itens.length && monitorQtd === 0) { alert('Selecione pelo menos um brinquedo!'); return; }
   const dados = coletarDados();
   try {
     setStatus('🔢 Gerando número do contrato…');
@@ -1293,10 +1313,10 @@ function mudarMes(delta) {
 
 function renderAgenda() {
   document.getElementById('agendaTituloMes').textContent = MESES[mesAtual] + ' ' + anoAtual;
-  const hoje       = new Date();
+  const hoje        = new Date();
   const primeiroDia = new Date(anoAtual, mesAtual, 1);
-  const ultimoDia  = new Date(anoAtual, mesAtual + 1, 0);
-  const startDow   = primeiroDia.getDay();
+  const ultimoDia   = new Date(anoAtual, mesAtual + 1, 0);
+  const startDow    = primeiroDia.getDay();
 
   const eventosPorDia = {};
   contratos.forEach(c => {
@@ -1394,7 +1414,6 @@ function mudarMesFin(delta) {
 }
 
 function parseDateStr(s) {
-  // s = 'YYYY-MM-DD'
   if (!s) return null;
   const p = s.split('-');
   return new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2]));
@@ -1423,7 +1442,6 @@ function renderFinanceiroResumo() {
   document.getElementById('finSaldoSub').textContent      = saldo >= 0 ? 'positivo' : 'negativo';
 }
 
-// ── Entradas: populate contrato select ───────────────────
 function populateContratoSelect() {
   const sel = document.getElementById('entradaContratoSelect');
   if (!sel) return;
@@ -1437,7 +1455,6 @@ function populateContratoSelect() {
     sel.appendChild(opt);
   });
   if (val) sel.value = val;
-  // Atualiza status se já havia seleção
   if (sel.value) onContratoSelecionado();
 }
 
@@ -1460,7 +1477,6 @@ function onContratoSelecionado() {
     '</div>';
 }
 
-// ── Entradas: linhas de pagamento ─────────────────────────
 function adicionarProw() {
   prowCount++;
   const id  = 'prow-' + prowCount;
@@ -1498,14 +1514,13 @@ function calcTotalSessao() {
 function coletarProws() {
   const rows = [];
   document.querySelectorAll('#prowContainer .prow').forEach(row => {
-    const val  = parseFloat(row.querySelector('.prow-valor').value) || 0;
+    const val   = parseFloat(row.querySelector('.prow-valor').value) || 0;
     const forma = row.querySelector('.prow-forma').value;
     if (val > 0) rows.push({ valor: val, forma });
   });
   return rows;
 }
 
-// ── Salvar entrada ────────────────────────────────────────
 async function salvarEntrada() {
   const pagamentos = coletarProws();
   if (!pagamentos.length) { alert('Informe pelo menos um valor de pagamento!'); return; }
@@ -1538,11 +1553,9 @@ async function salvarEntrada() {
       criadoEmMs: Date.now()
     });
     setStatus('');
-    // Limpar form
     document.querySelectorAll('.prow-valor').forEach(i => i.value = '');
     document.getElementById('entradaObs').value = '';
     document.getElementById('entradaData').value = dataHoje();
-    // Remover linhas extras
     const container = document.getElementById('prowContainer');
     while (container.children.length > 1) container.removeChild(container.lastChild);
     prowCount = 1;
@@ -1592,7 +1605,6 @@ function renderEntradas() {
   }).join('');
 }
 
-// ── Saídas ────────────────────────────────────────────────
 async function salvarSaida() {
   const valor   = parseFloat(document.getElementById('saidaValor').value) || 0;
   const destino = document.getElementById('saidaDestino').value.trim();
@@ -1648,34 +1660,35 @@ function renderSaidas() {
 }
 
 // ── Expor ao HTML (module scope) ──────────────────────────
-window.trocarAba          = trocarAba;
-window.trocarSubAba       = trocarSubAba;
-window.toggle             = toggle;
-window.setTipoDesconto    = setTipoDesconto;
-window.calcular           = calcular;
-window.enviarWA           = enviarWA;
-window.salvarContrato     = salvarContrato;
-window.filtrarContratos   = filtrarContratos;
-window.excluirContrato    = excluirContrato;
-window.verContrato        = verContrato;
-window.fecharModal        = fecharModal;
-window.waContrato         = waContrato;
-window.whatsAppModal      = whatsAppModal;
-window.imprimirContrato   = imprimirContrato;
+window.alterarMonitor        = alterarMonitor;
+window.trocarAba             = trocarAba;
+window.trocarSubAba          = trocarSubAba;
+window.toggle                = toggle;
+window.setTipoDesconto       = setTipoDesconto;
+window.calcular              = calcular;
+window.enviarWA              = enviarWA;
+window.salvarContrato        = salvarContrato;
+window.filtrarContratos      = filtrarContratos;
+window.excluirContrato       = excluirContrato;
+window.verContrato           = verContrato;
+window.fecharModal           = fecharModal;
+window.waContrato            = waContrato;
+window.whatsAppModal         = whatsAppModal;
+window.imprimirContrato      = imprimirContrato;
 window.imprimirModalContrato = imprimirModalContrato;
-window.mudarMes           = mudarMes;
-window.mudarMesFin        = mudarMesFin;
-window.scrollToEvento     = scrollToEvento;
-window.fazerLogin         = fazerLogin;
-window.fazerLogout        = fazerLogout;
+window.mudarMes              = mudarMes;
+window.mudarMesFin           = mudarMesFin;
+window.scrollToEvento        = scrollToEvento;
+window.fazerLogin            = fazerLogin;
+window.fazerLogout           = fazerLogout;
 window.onContratoSelecionado = onContratoSelecionado;
-window.adicionarProw      = adicionarProw;
-window.removerProw        = removerProw;
-window.calcTotalSessao    = calcTotalSessao;
-window.salvarEntrada      = salvarEntrada;
-window.excluirEntrada     = excluirEntrada;
-window.salvarSaida        = salvarSaida;
-window.excluirSaida       = excluirSaida;
+window.adicionarProw         = adicionarProw;
+window.removerProw           = removerProw;
+window.calcTotalSessao       = calcTotalSessao;
+window.salvarEntrada         = salvarEntrada;
+window.excluirEntrada        = excluirEntrada;
+window.salvarSaida           = salvarSaida;
+window.excluirSaida          = excluirSaida;
 </script>
 </body>
 </html>
